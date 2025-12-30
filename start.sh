@@ -4,6 +4,9 @@ set -e
 # Asegura que Shapely encuentre GEOS
 export GEOS_LIBRARY_PATH="${GEOS_LIBRARY_PATH:-/lib/aarch64-linux-gnu/libgeos_c.so.1}"
 export LD_LIBRARY_PATH="/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib:/usr/lib:${LD_LIBRARY_PATH:-}"
+export OPENBLAS_CORETYPE="${OPENBLAS_CORETYPE:-ARMV8}"
+export OPENBLAS_NUM_THREADS="${OPENBLAS_NUM_THREADS:-1}"
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-1}"
 
 # Si necesitas setup.sh, ejecútalo (si existe)
 if [ -f "./setup.sh" ]; then
