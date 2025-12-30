@@ -1,8 +1,12 @@
-name: Sync upstream
+name: Sync upstream (merge)
 
 on:
   schedule:
-    - cron: "*/60 * * * *"   # cada 60 minutos (ajústalo si quieres)
+  # cada 60 minutos:- cron: "*/60 * * * *"
+  # cada 6 horas: - cron: "0 */6 * * *"
+  # cada 12 horas: - cron: "0 */12 * * *"
+  # cada 24 horas: - cron: "0 0 * * *"
+    - cron: "*/60 * * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -12,14 +16,18 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout fork
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Add upstream
+      - name: Configure git identity
         run: |
-          git remote add upstream https://github.com/Estudis-apce/Conjuntura-sector.git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream + fetch
+        run: |
+          git remote add upstream https://github.com/Estudis-apce/Conjuntura-sector.git 2>/dev/null || true
           git fetch upstream
 
       - name: Merge upstream/main into main
@@ -27,6 +35,6 @@ jobs:
           git checkout main
           git merge upstream/main --no-edit
 
-      - name: Push changes
+      - name: Push
         run: |
           git push origin main
