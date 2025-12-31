@@ -1,8 +1,8 @@
-# nixpacks.toml
-# Objetivo: construir una imagen con dependencias GIS (GDAL/PROJ/GEOS) y ejecutar Streamlit
-# en Coolify (ARM64), instalando requirements-coolify.txt.
-
-providers = ["python"]
+# nixpacks.toml (ARM64 + Streamlit + Geo stack)
+# - Instala dependencias del sistema (GEOS/PROJ/GDAL + toolchain)
+# - Crea venv con el Python de Nix (python311) => NO usamos python3.11-venv de apt
+# - Instala requirements-coolify.txt
+# - Arranca con start.sh
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.11"
@@ -14,8 +14,7 @@ STREAMLIT_SERVER_HEADLESS = "true"
 
 [phases.setup]
 aptPkgs = [
-  # Herramientas base / build
-  "python3.11-venv",
+  # build toolchain
   "build-essential",
   "gcc",
   "g++",
@@ -26,11 +25,11 @@ aptPkgs = [
   "git",
   "wget",
 
-  # BLAS/LAPACK (ARM)
+  # BLAS/LAPACK
   "libopenblas-dev",
   "liblapack-dev",
 
-  # GEOS / PROJ / GDAL
+  # Geo stack
   "libgeos-dev",
   "proj-bin",
   "libproj-dev",
@@ -38,8 +37,7 @@ aptPkgs = [
   "libgdal-dev"
 ]
 
-# A veces Shapely busca libgeos_c en rutas "cortas".
-# Creamos symlinks (si aplica) y refrescamos cache del linker.
+# Symlinks para GEOS_C (por si Shapely busca rutas cortas)
 cmds = [
   "set -eux; d=/lib/aarch64-linux-gnu; [ -e \"$d/libgeos_c.so.1\" ] && ln -sf \"$d/libgeos_c.so.1\" /usr/lib/libgeos_c.so.1 || true; [ -e \"$d/libgeos_c.so\" ] && ln -sf \"$d/libgeos_c.so\" /usr/lib/libgeos_c.so || true; ldconfig 2>/dev/null || true"
 ]
@@ -48,10 +46,11 @@ cmds = [
 cmds = [
   "python -m venv /opt/venv",
   ". /opt/venv/bin/activate && pip install -U pip setuptools wheel",
-  ". /opt/venv/bin/activate && pip install -r requirements-coolify.txt"
+
+  # Compila numpy/pandas en ARM para evitar wheels problemáticas (si no quieres esto, cámbialo por pip install -r ...)
+  ". /opt/venv/bin/activate && pip install --no-binary=numpy,pandas -r requirements-coolify.txt"
 ]
 
-# (Opcional pero útil) Mini-check en build para detectar roturas pronto
 [phases.build]
 cmds = [
   ". /opt/venv/bin/activate && python -c \"import sys; print('PY=', sys.version)\"",
