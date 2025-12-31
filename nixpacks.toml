@@ -1,8 +1,46 @@
+# nixpacks.toml - ARM64 (OCI) + Streamlit + Geo stack
+# Objetivo: evitar SIGILL (exit 132) y asegurar libs GIS disponibles.
+
+[phases.setup]
+# Paquetes del sistema necesarios para compilar wheels en ARM y para GIS
+aptPkgs = [
+  "python3.11-venv",
+  "build-essential",
+  "gcc",
+  "g++",
+  "gfortran",
+  "pkg-config",
+  "cmake",
+
+  # BLAS/LAPACK (clave para numpy/pandas/scipy)
+  "libopenblas-dev",
+  "liblapack-dev",
+
+  # Geo stack (para shapely/pyproj/geopandas y posibles dependencias)
+  "libgeos-dev",
+  "proj-bin",
+  "libproj-dev",
+  "gdal-bin",
+  "libgdal-dev",
+
+  # Utilidades
+  "curl",
+  "git"
+]
+
 [phases.install]
 cmds = [
+  # Virtualenv
   "python -m venv /opt/venv",
+
+  # Herramientas de build de Python
   ". /opt/venv/bin/activate && pip install -U pip setuptools wheel",
-  ". /opt/venv/bin/activate && pip install -r requirements-coolify.txt"
+
+  # Forzamos compilación local de numpy y pandas para evitar wheels problemáticas en ARM (SIGILL/132)
+  # y para enlazar contra OpenBLAS del sistema.
+  #
+  # Si quieres forzar también shapely/pyproj/geopandas a source, añade a la lista.
+  ". /opt/venv/bin/activate && PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 pip install --no-binary=numpy,pandas -r requirements-coolify.txt"
 ]
 
 [start]
