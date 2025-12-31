@@ -1,9 +1,4 @@
 # nixpacks.toml (ARM64 + Streamlit + Geo stack) - Coolify
-# Objetivo:
-#  - Instalar dependencias del sistema (GEOS/PROJ/GDAL + toolchain)
-#  - Crear venv en /opt/venv e instalar requirements-coolify.txt
-#  - NO romper el build importando shapely sin paths
-#  - Arrancar con start.sh
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.11"
@@ -13,25 +8,21 @@ PIP_NO_CACHE_DIR = "1"
 STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
 STREAMLIT_SERVER_HEADLESS = "true"
 
-# (Opcional pero recomendable en ARM para evitar SIGILL)
 OPENBLAS_CORETYPE = "ARMV8"
 OPENBLAS_NUM_THREADS = "1"
 OMP_NUM_THREADS = "1"
 NUMEXPR_NUM_THREADS = "1"
 
-# Forzamos rutas típicas en Ubuntu ARM64 (shapely/geopandas)
 GEOS_LIBRARY_PATH = "/lib/aarch64-linux-gnu/libgeos_c.so.1"
 LD_LIBRARY_PATH = "/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib:/usr/lib"
 
 [phases.setup]
 aptPkgs = [
-  # base
   "ca-certificates",
   "curl",
   "wget",
   "git",
 
-  # build toolchain
   "build-essential",
   "gcc",
   "g++",
@@ -39,46 +30,29 @@ aptPkgs = [
   "pkg-config",
   "cmake",
 
-  # BLAS/LAPACK (para numpy/pandas/scipy si compilan)
   "libopenblas-dev",
   "liblapack-dev",
 
-  # Geo stack
   "libgeos-dev",
   "proj-bin",
   "libproj-dev",
   "gdal-bin",
   "libgdal-dev"
 ]
-
 cmds = [
-  # Symlinks "cortos" por si algo intenta /usr/lib/libgeos_c.so.*
-  "set -eux; d=/lib/aarch64-linux-gnu; " ..
-  "[ -e \"$d/libgeos_c.so.1\" ] && ln -sf \"$d/libgeos_c.so.1\" /usr/lib/libgeos_c.so.1 || true; " ..
-  "[ -e \"$d/libgeos_c.so\" ] && ln -sf \"$d/libgeos_c.so\" /usr/lib/libgeos_c.so || true; " ..
-  "ldconfig 2>/dev/null || true"
+  "set -eux; d=/lib/aarch64-linux-gnu; [ -e \"$d/libgeos_c.so.1\" ] && ln -sf \"$d/libgeos_c.so.1\" /usr/lib/libgeos_c.so.1 || true; [ -e \"$d/libgeos_c.so\" ] && ln -sf \"$d/libgeos_c.so\" /usr/lib/libgeos_c.so || true; ldconfig 2>/dev/null || true"
 ]
 
 [phases.install]
 cmds = [
-  # venv
   "python -m venv /opt/venv",
   ". /opt/venv/bin/activate && pip install -U pip setuptools wheel",
-
-  # Importante:
-  # - En ARM, si quieres máxima estabilidad, compila numpy/pandas desde fuente.
-  # - Si prefieres velocidad, quita --no-binary=... (pero puedes volver a SIGILL en algunos casos).
   ". /opt/venv/bin/activate && pip install --no-binary=numpy,pandas -r requirements-coolify.txt"
 ]
 
 [phases.build]
 cmds = [
-  # Check *seguro* (NO importes shapely/geopandas aquí sin paths):
-  ". /opt/venv/bin/activate && python -c \"import sys; print('PY=', sys.version)\"",
-
-  # Si quieres checkear shapely/geopandas, hazlo con envs explícitas:
-  ". /opt/venv/bin/activate && GEOS_LIBRARY_PATH=/lib/aarch64-linux-gnu/libgeos_c.so.1 LD_LIBRARY_PATH=/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib:/usr/lib python -c \"import shapely; print('shapely=', shapely.__version__)\"",
-  ". /opt/venv/bin/activate && GEOS_LIBRARY_PATH=/lib/aarch64-linux-gnu/libgeos_c.so.1 LD_LIBRARY_PATH=/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib:/usr/lib python -c \"import geopandas; print('geopandas=', geopandas.__version__)\""
+  ". /opt/venv/bin/activate && python -c \"import sys; print('PY=', sys.version)\""
 ]
 
 [start]
