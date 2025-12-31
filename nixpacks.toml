@@ -1,37 +1,61 @@
-# nixpacks.toml - ARM64 (OCI) + Streamlit + Geo stack
-# Objetivo: compilar numpy/pandas en ARM y tener librerías GIS del sistema.
+# nixpacks.toml
+# Objetivo: construir una imagen con dependencias GIS (GDAL/PROJ/GEOS) y ejecutar Streamlit
+# en Coolify (ARM64), instalando requirements-coolify.txt.
+
+providers = ["python"]
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.11"
+PYTHONUNBUFFERED = "1"
+PIP_DISABLE_PIP_VERSION_CHECK = "1"
+PIP_NO_CACHE_DIR = "1"
+STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
+STREAMLIT_SERVER_HEADLESS = "true"
 
 [phases.setup]
 aptPkgs = [
+  # Herramientas base / build
+  "python3.11-venv",
   "build-essential",
   "gcc",
   "g++",
   "gfortran",
   "pkg-config",
   "cmake",
+  "curl",
+  "git",
+  "wget",
 
-  # BLAS/LAPACK
+  # BLAS/LAPACK (ARM)
   "libopenblas-dev",
   "liblapack-dev",
 
-  # Geo stack
+  # GEOS / PROJ / GDAL
   "libgeos-dev",
   "proj-bin",
   "libproj-dev",
   "gdal-bin",
-  "libgdal-dev",
+  "libgdal-dev"
+]
 
-  # utilidades
-  "curl",
-  "git",
-  "wget"
+# A veces Shapely busca libgeos_c en rutas "cortas".
+# Creamos symlinks (si aplica) y refrescamos cache del linker.
+cmds = [
+  "set -eux; d=/lib/aarch64-linux-gnu; [ -e \"$d/libgeos_c.so.1\" ] && ln -sf \"$d/libgeos_c.so.1\" /usr/lib/libgeos_c.so.1 || true; [ -e \"$d/libgeos_c.so\" ] && ln -sf \"$d/libgeos_c.so\" /usr/lib/libgeos_c.so || true; ldconfig 2>/dev/null || true"
 ]
 
 [phases.install]
 cmds = [
   "python -m venv /opt/venv",
   ". /opt/venv/bin/activate && pip install -U pip setuptools wheel",
-  ". /opt/venv/bin/activate && PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 pip install --no-binary=numpy,pandas -r requirements-coolify.txt"
+  ". /opt/venv/bin/activate && pip install -r requirements-coolify.txt"
+]
+
+# (Opcional pero útil) Mini-check en build para detectar roturas pronto
+[phases.build]
+cmds = [
+  ". /opt/venv/bin/activate && python -c \"import sys; print('PY=', sys.version)\"",
+  ". /opt/venv/bin/activate && python -c \"import shapely, geopandas; print('shapely=', shapely.__version__, 'geopandas=', geopandas.__version__)\""
 ]
 
 [start]
