@@ -1,34 +1,29 @@
-# nixpacks.toml (ARM64 + Streamlit + Geo stack) - Coolify
+# nixpacks.toml (ARM64 + Streamlit + Geo stack)
 
 [variables]
-NIXPACKS_PYTHON_VERSION = "3.11"
 PYTHONUNBUFFERED = "1"
 PIP_DISABLE_PIP_VERSION_CHECK = "1"
 PIP_NO_CACHE_DIR = "1"
 STREAMLIT_BROWSER_GATHER_USAGE_STATS = "false"
 STREAMLIT_SERVER_HEADLESS = "true"
 
+# OpenBLAS a nivel de build/runtime (por si algo importa antes)
 OPENBLAS_CORETYPE = "ARMV8"
 OPENBLAS_NUM_THREADS = "1"
 OMP_NUM_THREADS = "1"
 NUMEXPR_NUM_THREADS = "1"
 
-GEOS_LIBRARY_PATH = "/lib/aarch64-linux-gnu/libgeos_c.so.1"
-LD_LIBRARY_PATH = "/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu:/lib:/usr/lib"
-
 [phases.setup]
 aptPkgs = [
-  "ca-certificates",
-  "curl",
-  "wget",
-  "git",
-
   "build-essential",
   "gcc",
   "g++",
   "gfortran",
   "pkg-config",
   "cmake",
+  "curl",
+  "git",
+  "wget",
 
   "libopenblas-dev",
   "liblapack-dev",
@@ -47,12 +42,15 @@ cmds = [
 cmds = [
   "python -m venv /opt/venv",
   ". /opt/venv/bin/activate && pip install -U pip setuptools wheel",
-  ". /opt/venv/bin/activate && pip install --no-binary=numpy,pandas -r requirements-coolify.txt"
+  ". /opt/venv/bin/activate && pip install --prefer-binary -r requirements-coolify.txt"
 ]
 
 [phases.build]
 cmds = [
-  ". /opt/venv/bin/activate && python -c \"import sys; print('PY=', sys.version)\""
+  ". /opt/venv/bin/activate && python -c \"import sys; print(sys.version)\"",
+  ". /opt/venv/bin/activate && python -c \"import numpy; print('numpy', numpy.__version__)\"",
+  ". /opt/venv/bin/activate && python -c \"import shapely; print('shapely', shapely.__version__)\"",
+  ". /opt/venv/bin/activate && python -c \"import geopandas; print('geopandas', geopandas.__version__)\""
 ]
 
 [start]
