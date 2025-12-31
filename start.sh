@@ -21,8 +21,10 @@ ls -lah /lib/aarch64-linux-gnu/libgeos_c.so* 2>/dev/null || true
 # setup opcional
 if [ -f "./setup.sh" ]; then
   echo "[start] running setup.sh"
-  sh ./setup.sh
+  sh ./setup.sh || echo "[start] setup.sh failed (ignored)"
 fi
 
-# Arranque Streamlit (puerto fijo)
-exec streamlit run APP_Dades.py --server.address 0.0.0.0 --server.port 8501
+PORT_TO_USE="${PORT:-8501}"
+echo "[start] streamlit port=$PORT_TO_USE"
+
+exec streamlit run APP_Dades.py --server.address 0.0.0.0 --server.port "$PORT_TO_USE"
